@@ -1,0 +1,10 @@
+{
+  "name": "essentials",
+  "version": "1.2.0",
+  "description": "Four AI skills that explain and report a data team's numbers, from Kinetric.",
+  "author": {
+    "name": "Kinetric",
+    "url": "https://kinetric.co"
+  },
+  "license": "MIT"
+}

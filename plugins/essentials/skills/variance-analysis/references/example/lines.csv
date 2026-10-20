@@ -1,0 +1,9 @@
+line,type,budget,actual,owner,total
+Product revenue,revenue,1200000,1318400,Sales lead,
+Services revenue,revenue,240000,236900,Services lead,
+Total revenue,revenue,1440000,1555300,,yes
+Cost of goods,cost,540000,601250,Ops lead,
+Payroll,cost,410000,404100,Finance,
+Marketing,cost,95000,71800,Marketing lead,
+Software,cost,38000,39950,IT,
+Total costs,cost,1083000,1117100,,yes

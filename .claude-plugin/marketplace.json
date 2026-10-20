@@ -1,0 +1,15 @@
+{
+  "name": "kinetric",
+  "description": "Kinetric's free skills for data teams.",
+  "owner": {
+    "name": "Kinetric",
+    "url": "https://kinetric.co"
+  },
+  "plugins": [
+    {
+      "name": "essentials",
+      "source": "./plugins/essentials",
+      "description": "Four AI skills that explain and report a data team's numbers."
+    }
+  ]
+}

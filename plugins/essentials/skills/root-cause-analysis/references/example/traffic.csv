@@ -1,0 +1,15 @@
+month,channel,device,sessions,orders,revenue
+2026-08,Paid search,Mobile,60000,1500,120000
+2026-08,Paid search,Desktop,40000,1600,160000
+2026-08,Email,Mobile,20000,900,63000
+2026-08,Email,Desktop,10000,600,48000
+2026-08,Organic,Mobile,50000,1000,70000
+2026-08,Organic,Desktop,30000,900,81000
+2026-09,Paid search,Mobile,90000,2160,172800
+2026-09,Paid search,Desktop,40000,1640,164000
+2026-09,Email,Mobile,20000,880,61600
+2026-09,Email,Desktop,10000,590,47200
+2026-09,Organic,Mobile,50000,1000,70000
+2026-09,Organic,Desktop,30000,900,81000
+2026-09,Affiliate,Mobile,10000,200,16000
+2026-07,Paid search,Mobile,55000,1400,110000

@@ -1,0 +1,32 @@
+{
+  "team": "Growth analytics (example team)",
+  "fn": "Marketing / growth",
+  "tools": ["Google Sheets", "SQL", "Looker"],
+  "readers": [
+    {"who": "An executive (CEO, CFO, COO)", "decides": "Where next month's marketing budget goes", "time": "2 minutes", "first": "The answer or recommendation"},
+    {"who": "The team's own lead", "decides": "Which campaigns to pause", "time": "10 minutes or more", "first": "The number against target"}
+  ],
+  "sources": [
+    {"what": "Revenue", "system": "Shopify orders export", "refresh": "Daily"},
+    {"what": "Marketing spend", "system": "Meta and Google Ads, via the weekly sheet", "refresh": "Weekly"},
+    {"what": "Customers", "system": "Klaviyo profiles", "refresh": "Daily"}
+  ],
+  "terms": {
+    "Revenue": {"pick": "Net of returns and discounts", "own": ""},
+    "Active customer": {"pick": "Bought in the last 12 months", "own": ""},
+    "Churn": {"pick": "", "own": ""},
+    "Conversion rate": {"pick": "Orders divided by sessions", "own": ""},
+    "Margin": {"pick": "", "own": "Contribution margin after shipping and ad spend, before overhead"}
+  },
+  "extraTerms": [{"term": "New customer", "def": "First order ever on this email address, not first order this year"}],
+  "good": ["The answer is in the first line", "Every number sits beside last period", "One chart per point", "It ends with a recommendation"],
+  "bad": ["A number didn't match another report", "Too much detail for the reader"],
+  "examples": "March budget memo (the one the CEO forwarded); weekly channel report, week 14",
+  "never": ["Pie charts", "A metric shown without its target or comparison"],
+  "neverOther": "ROAS from the ad platforms quoted as if it were store revenue",
+  "checks": ["Totals tie to the source system", "No duplicate rows or ids"],
+  "tasks": [
+    {"name": "Weekly channel report", "cadence": "Weekly", "hours": "4", "redone": "Sometimes", "trust": "2"},
+    {"name": "Monthly budget memo", "cadence": "Monthly", "hours": "10", "redone": "Often", "trust": "1"}
+  ]
+}

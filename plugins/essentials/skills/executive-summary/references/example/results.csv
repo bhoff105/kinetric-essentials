@@ -1,0 +1,5 @@
+segment,orders_aug,orders_sep,revenue_aug,revenue_sep,conversion_aug,conversion_sep
+Paid search,4120,4890,412300.50,501880.00,0.0312,0.0341
+Email,2210,2105,198450.00,190210.25,0.0455,0.0438
+Organic,3015,3060,287120.00,291005.75,0.0251,0.0249
+Total,9345,10055,897870.50,983096.00,0.0298,0.0313
