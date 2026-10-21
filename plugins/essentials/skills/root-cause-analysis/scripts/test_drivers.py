@@ -64,8 +64,47 @@ with tempfile.TemporaryDirectory() as d:
 with tempfile.TemporaryDirectory() as d:
     ok(run(drivers, DATA, "--period-col", "month", "--from", "2026-08", "--to", "2026-10", "--value", "revenue", "--dims", "channel", "--out", os.path.join(d, "o")) == 2
        and not os.path.exists(os.path.join(d, "o")), "a period with no rows exits 2 and writes nothing")
-    ok(run(drivers, DATA, *BASE, "--value", "profit", "--dims", "channel", "--out", d) == 2, "a missing column exits 2")
-    ok(run(drivers, DATA, *BASE, "--numerator", "orders", "--dims", "channel", "--out", d) == 2, "a rate without a denominator exits 2")
+    ok(run(drivers, DATA, *BASE, "--value", "profit", "--dims", "channel", "--out", os.path.join(d, "m")) == 2
+       and not os.path.exists(os.path.join(d, "m")), "a missing column exits 2 and writes nothing")
+    ok(run(drivers, DATA, *BASE, "--numerator", "orders", "--dims", "channel", "--out", os.path.join(d, "r")) == 2
+       and not os.path.exists(os.path.join(d, "r")), "a rate without a denominator exits 2 and writes nothing")
+
+with tempfile.TemporaryDirectory() as d:
+    rows = list(csv.reader(open(DATA, encoding="utf-8")))
+    hdr = rows[0]
+    blank = [r[:] for r in rows]
+    blank[1][hdr.index("revenue")] = ""
+    p = os.path.join(d, "blank.csv")
+    with open(p, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows(blank)
+    code = run(drivers, p, *BASE, "--value", "revenue", "--dims", "channel", "--out", os.path.join(d, "b"))
+    checks = open(os.path.join(d, "b", "checks.txt"), encoding="utf-8").read()
+    ok(code == 1 and "blank cells, revenue: 1" in checks and "blank cell(s) in revenue (row 2)" in checks,
+       "a blank revenue cell is counted, named by row, and exits 1")
+    p = os.path.join(d, "nosess.csv")
+    with open(p, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows(rows + [["2026-09", "Referral", "Mobile", "0", "50", "4000"]])
+    code = run(drivers, p, *BASE, "--numerator", "orders", "--denominator", "sessions", "--dims", "channel", "--out", os.path.join(d, "n"))
+    checks = open(os.path.join(d, "n", "checks.txt"), encoding="utf-8").read()
+    ok(code == 1 and "FAIL" in checks, "a segment with orders but no sessions breaks the add-up check and exits 1")
+    p = os.path.join(d, "comma.csv")
+    with open(p, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows(rows + [["2026-09", "Referral", "Mobile", "10", "1", "12,5"]])
+    ok(run(drivers, p, *BASE, "--value", "revenue", "--dims", "channel", "--out", os.path.join(d, "c")) == 2
+       and not os.path.exists(os.path.join(d, "c")), "a decimal comma (12,5) stops the run, exit 2, nothing written")
+    for word in ("nan", "inf"):
+        p = os.path.join(d, f"{word}.csv")
+        with open(p, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows + [["2026-09", "Referral", "Mobile", "10", "1", word]])
+        ok(run(drivers, p, *BASE, "--value", "revenue", "--dims", "channel", "--out", os.path.join(d, word)) == 2
+           and not os.path.exists(os.path.join(d, word)), f"a cell reading {word} stops the run, exit 2, nothing written")
+    p = os.path.join(d, "short.csv")
+    with open(p, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows(rows + [["2026-09"]])
+    code = run(drivers, p, *BASE, "--value", "revenue", "--dims", "channel", "--out", os.path.join(d, "s"))
+    checks = open(os.path.join(d, "s", "checks.txt"), encoding="utf-8").read()
+    ok(code == 1 and "blank channel cells, grouped as '(blank)': 1" in checks and "blank cell(s) in revenue" in checks,
+       "a short row (only a month) is read as blanks, counted and named, exit 1, no crash")
 
 print(f"\n{'all passed' if not fails else str(fails) + ' failed'}")
 sys.exit(1 if fails else 0)

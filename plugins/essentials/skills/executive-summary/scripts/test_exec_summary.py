@@ -45,10 +45,22 @@ with tempfile.TemporaryDirectory() as d:
         open(dpath, "w").write(text + "\n")
         code, _ = run(dpath, "--source", s)
         ok(code == want, f"{text!r} exits {want}")
+    open(dpath, "w").write("Orders were 1,950 in fiscal 2026.\n")
+    code, out = run(dpath, "--source", s)
+    ok(code == 1 and "NOT FOUND" in out and "1,950" in out and "SKIPPED" in out and "1 skipped as years" in out,
+       "a comma-formatted 1,950 is checked; a bare 2026 is skipped as a year and counted")
+    s2 = os.path.join(d, "s2.csv")
+    open(s2, "w").write("metric,value\norders,1950\n")
+    code, out = run(dpath, "--source", s2)
+    ok(code == 0 and "1 traced" in out, "a draft's 1,950 traces to a bare 1950 in a source")
     code, _ = run(os.path.join(d, "nope.md"), "--source", s)
     ok(code == 2, "a missing draft exits 2")
     code, _ = run(os.path.join(EX, "summary_good.md"), "--source", os.path.join(d, "nope.csv"))
     ok(code == 2, "a missing source exits 2")
+    latin = os.path.join(d, "latin.md")
+    open(latin, "wb").write(b"Revenue was \xa31.23M.\n")  # a pound sign in Latin-1, not UTF-8
+    code, _ = run(latin, "--source", s)
+    ok(code == 2, "a draft that is not UTF-8 exits 2, not a false NOT FOUND")
 
 print(f"\n{'all passed' if not fails else str(fails) + ' failed'}")
 sys.exit(1 if fails else 0)

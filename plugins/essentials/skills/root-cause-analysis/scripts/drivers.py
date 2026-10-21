@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""drivers.py: why did the number move? Break a change between two periods down by segment, and check it adds up.
+"""drivers.py: where did the number move? Break a change between two periods down by segment, and check it adds up.
 Part of Kinetric's Essentials pack (MIT). Standard library only.
 
 Additive metric (revenue, orders, cost):
@@ -17,12 +17,17 @@ segment's rate change). A segment that grows its share while converting above av
 segment new in the second period is measured against the old average. Both decompositions add back to the total
 exactly, and the script checks that they do.
 
+A comma is read only as a thousands separator; a decimal comma stops the run (exit 2). A blank number cell in either
+period is read as 0, counted in checks.txt and reported as a problem.
+
 Writes to DIR: drivers.md, drivers.csv, checks.txt. Exit 0: written, every decomposition adds up. Exit 1: written, but
-something is off (named). Exit 2: unreadable input, a missing column, or a period with no rows; nothing written.
+something is off (named): a breakdown doesn't add up, or a number cell is blank. Exit 2: unreadable input, a missing
+column, a figure that is not a number, or a period with no rows; nothing written.
 """
 import argparse
 import csv
 import os
+import re
 import sys
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
@@ -31,13 +36,20 @@ TOL = Decimal("0.000001")
 
 
 def d(s, where):
-    t = (s or "").strip().replace(",", "").replace("$", "")
+    t = (s or "").strip().replace("$", "")
     if t == "":
         return Decimal(0)
+    if "," in t:
+        if not re.fullmatch(r"[-+]?\d{1,3}(,\d{3})+(\.\d+)?", t):
+            raise ValueError(f"{where}: '{s}' has a comma that is not a thousands separator (a decimal comma is not read)")
+        t = t.replace(",", "")
     try:
-        return Decimal(t)
+        v = Decimal(t)
     except InvalidOperation:
         raise ValueError(f"{where}: '{s}' is not a number")
+    if not v.is_finite():
+        raise ValueError(f"{where}: '{s}' is not a number")
+    return v
 
 
 def q(v):
@@ -76,8 +88,8 @@ def main(argv=None):
     try:
         with open(a.data, encoding="utf-8-sig", newline="") as f:
             rows = list(csv.DictReader(f))
-    except OSError as e:
-        print(f"drivers: cannot read {a.data}: {e}", file=sys.stderr)
+    except (OSError, UnicodeDecodeError, csv.Error) as e:
+        print(f"drivers: cannot read {a.data} (save it as UTF-8 CSV): {e}", file=sys.stderr)
         return 2
     need = [a.period_col] + dims + ([a.numerator, a.denominator] if rate else [a.value])
     have = set(rows[0].keys()) if rows else set()
@@ -87,7 +99,7 @@ def main(argv=None):
         return 2
     sel = {a.p0: [], a.p1: []}
     for i, r in enumerate(rows, 2):
-        p = r[a.period_col].strip()
+        p = (r[a.period_col] or "").strip()  # a short row reads its missing cells as None
         if p in sel:
             sel[p].append((i, r))
     for p, rs in sel.items():
@@ -95,6 +107,8 @@ def main(argv=None):
             print(f"drivers: no rows for period '{p}' in column {a.period_col}", file=sys.stderr)
             return 2
     other = len(rows) - len(sel[a.p0]) - len(sel[a.p1])
+    num_cols = [a.numerator, a.denominator] if rate else [a.value]
+    blanks = {c: [i for p in (a.p0, a.p1) for i, r in sel[p] if (r[c] or "").strip() == ""] for c in num_cols}
 
     def tot(p, col):
         return sum((d(r[col], f"row {i} {col}") for i, r in sel[p]), Decimal(0))
@@ -113,12 +127,16 @@ def main(argv=None):
         return 2
     change = T1 - T0
     problems, tables, csv_rows = [], {}, []
+    for c, at in blanks.items():
+        if at:
+            shown = ", ".join(str(i) for i in at[:10]) + (" ..." if len(at) > 10 else "")
+            problems.append(f"{len(at)} blank cell(s) in {c} (row {shown}), read as 0; fill them or confirm they are zero")
 
     for dim in dims:
         seg = defaultdict(lambda: {"n0": Decimal(0), "n1": Decimal(0), "d0": Decimal(0), "d1": Decimal(0)})
         for p, key in ((a.p0, "0"), (a.p1, "1")):
             for i, r in sel[p]:
-                s = r[dim].strip() or "(blank)"
+                s = (r[dim] or "").strip() or "(blank)"
                 if rate:
                     seg[s]["n" + key] += d(r[a.numerator], f"row {i}")
                     seg[s]["d" + key] += d(r[a.denominator], f"row {i}")
@@ -201,6 +219,9 @@ def main(argv=None):
 
     C = [f"source: {os.path.basename(a.data)}", f"rows read: {len(rows)}",
          f"rows in {a.p0}: {len(sel[a.p0])}", f"rows in {a.p1}: {len(sel[a.p1])}", f"rows in other periods (ignored): {other}",
+         *[f"blank cells, {c}: {len(at)}" for c, at in blanks.items()],
+         *[f"blank {dim} cells, grouped as '(blank)': {n}" for dim in dims
+           if (n := sum(1 for p in (a.p0, a.p1) for _, r in sel[p] if not (r[dim] or "").strip()))],
          f"metric: {'rate ' if rate else 'additive '}{name}", f"total {a.p0}: {q(T0)}", f"total {a.p1}: {q(T1)}", f"change: {q(change)}"]
     for dim, (out, gap) in tables.items():
         C.append(f"adds up, {dim}: {len(out)} segments, gap {q(gap)} {'OK' if abs(gap) <= TOL else 'FAIL'}")

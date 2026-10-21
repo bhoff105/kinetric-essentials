@@ -61,8 +61,34 @@ with tempfile.TemporaryDirectory() as d:
     open(bad, "w").write("name,budget,actual\nx,1,2\n")
     ok(run(variance, bad, "--out", os.path.join(d, "o")) == 2 and not os.path.exists(os.path.join(d, "o")),
        "a missing line column exits 2 and writes nothing")
+    open(bad, "w").write("line,budget,actual\nx,100,\ny,50,60\n")
+    code = run(variance, bad, "--out", os.path.join(d, "b"))
+    checks = open(os.path.join(d, "b", "checks.txt"), encoding="utf-8").read()
+    ok(code == 1 and "x" in checks and "blank" in checks, "a blank actual is named as a problem and exits 1")
+    open(bad, "w").write('line,budget,actual\nx,"1,5",2\n')
+    ok(run(variance, bad, "--out", os.path.join(d, "c")) == 2 and not os.path.exists(os.path.join(d, "c")),
+       "a decimal comma (1,5) stops the run, exit 2, nothing written")
+    open(bad, "w").write("line,type,budget,actual\nRent,cost,-5000,-6000\n")
+    code = run(variance, bad, "--out", os.path.join(d, "n"))
+    checks = open(os.path.join(d, "n", "checks.txt"), encoding="utf-8").read()
+    ok(code == 1 and "a cost entered as a negative" in checks, "a negative cost is flagged for the person to confirm, exit 1")
+    open(bad, "w").write("line,type,budget,actual,total\nSales,revenue,100,120,\nRevenue,revenue,100,120,yes\n"
+                         "Rent,cost,40,50,\nCosts,cost,40,50,yes\nNet income,other,60,70,\n")
+    code = run(variance, bad, "--out", os.path.join(d, "g"))
+    checks = open(os.path.join(d, "g", "checks.txt"), encoding="utf-8").read()
+    ok(code == 0 and checks.count("TIES") == 4, "subtotals tie to the lines above them; an unmarked net row is left alone")
+    open(bad, "w").write("line,budget,actual\nx,100,nan\n")
+    ok(run(variance, bad, "--out", os.path.join(d, "f")) == 2 and not os.path.exists(os.path.join(d, "f")),
+       "a cell reading nan stops the run, exit 2, nothing written")
+    open(bad, "w").write("line,budget,actual\nx,100,inf\n")
+    ok(run(variance, bad, "--out", os.path.join(d, "i")) == 2 and not os.path.exists(os.path.join(d, "i")),
+       "a cell reading inf stops the run, exit 2, nothing written")
+    open(bad, "w").write("line,budget,actual\nx,100,(250\n")
+    ok(run(variance, bad, "--out", os.path.join(d, "p")) == 2 and not os.path.exists(os.path.join(d, "p")),
+       "an unmatched parenthesis, (250, stops the run, exit 2, nothing written")
     open(bad, "w").write("line,budget,actual\nx,1,abc\n")
-    ok(run(variance, bad, "--out", os.path.join(d, "o")) == 2, "a non-number exits 2")
+    ok(run(variance, bad, "--out", os.path.join(d, "x")) == 2 and not os.path.exists(os.path.join(d, "x")),
+       "a non-number exits 2 and writes nothing")
 
 print(f"\n{'all passed' if not fails else str(fails) + ' failed'}")
 sys.exit(1 if fails else 0)

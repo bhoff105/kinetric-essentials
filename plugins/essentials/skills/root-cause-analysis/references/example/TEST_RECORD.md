@@ -12,7 +12,7 @@ and September 2026, with a new channel (Affiliate) in September and one July row
   its rate effect zero. Paid search's rate effect must equal its September share (0.52) times its rate change
   (3,800 / 130,000 minus 0.031).
 
-**Run:** `python3 scripts/test_drivers.py`, 2026-10-12. Fourteen tests, all pass:
+**Run:** `python3 scripts/test_drivers.py`, 2026-10-20. Twenty tests, all pass:
 
 - every channel and device contribution matches the hand-worked figures; Affiliate is marked new;
 - the July row is counted and ignored;
@@ -20,7 +20,11 @@ and September 2026, with a new channel (Affiliate) in September and one July row
   effect zero; Paid search's rate effect matches the formula;
 - every number in `drivers.md` traces to `drivers.csv` or the data;
 - a second run is byte-identical;
-- a missing period, a missing column, or a rate without a denominator exits 2 and writes nothing.
+- a missing period, a missing column, or a rate without a denominator exits 2 and writes nothing;
+- a blank revenue cell on row 2 is counted ("blank cells, revenue: 1"), named by row, and exits 1;
+- a September Referral row with 50 orders and 0 sessions breaks the rate's add-up check (FAIL) and exits 1;
+- a decimal comma ("12,5") or a cell reading "nan" or "inf" stops the run with exit 2 and writes nothing;
+- a short row holding only a month is read as blanks: its channel counted as (blank), its revenue cell named, exit 1.
 
 **Fixed during the build:** the first version measured mix effects against zero, so a below-average segment losing
 share showed as pulling the rate down. Mix is now measured against the old average, the standard form, which still

@@ -1,8 +1,8 @@
 # Kinetric Essentials
 
 Four AI skills that explain and report a data team's numbers. Install them once and Claude uses them whenever the work
-comes up: drafting the variance commentary, working out why a number moved, turning an analysis into five lines for a
-leader. The hours you get back go to implementation, new ideas and better products.
+comes up: drafting the variance commentary, finding where a number moved and proving it adds up, turning an analysis
+into five lines for a leader. The hours you get back go to implementation, new ideas and better products.
 
 Free, MIT licensed, from [Kinetric](https://kinetric.co). Version 1.2.0.
 
@@ -17,12 +17,17 @@ Run **reporting-standards** first. It's a ten-minute interview that writes `HOUS
 numbers live, what your words mean, and what must never appear. The other three skills read it before every draft, so
 the first draft already uses your definitions and your thresholds instead of generic ones.
 
-## Every number is tied out
+## Every number is checked against your files
 
-The three analysis skills hand the arithmetic to a small script and check their own draft before you see it.
-Variance analysis ties every total to your pack. Root cause analysis proves the segments add up to the change. All three
-trace each number in their draft back to your file, and a number they can't trace is named, never used. No skill
-changes one of your numbers; a total that doesn't tie is reported, not fixed.
+Variance analysis and root cause analysis hand the arithmetic to a small script, and all three analysis skills check
+their own draft before you see it. Variance analysis ties every subtotal to the lines above it in your pack. Root
+cause analysis proves the segments add up to the change. All three look for each number in their draft in your files,
+at the rounding the draft uses, or in a `derived.csv` that writes down how a computed figure was worked out (written
+down, not recomputed). A number they can't find is named, never used. The check finds the figure; it doesn't know
+which line a figure belongs to or which way it moved, and it reads no words, so the line, the direction and the
+wording are yours to check. A bare four-digit number from 1900 to 2100 (no comma, no currency sign) is read as a year:
+it is listed as skipped, not traced. No skill changes one of your numbers; a total that doesn't tie is reported, not
+fixed.
 
 ## What these skills cannot tell you
 
@@ -31,20 +36,20 @@ changes one of your numbers; a total that doesn't tie is reported, not fixed.
 | **reporting-standards** | Whether your team's rules are the right ones. It writes down how you work today, accurately |
 | **variance-analysis** | Why a line moved, whether the budget was right, or whether a timing difference reverses next month. The draft asks each owner |
 | **root-cause-analysis** | Why each segment moved, or whether the move will last. It says where the change sits and proves the arithmetic |
-| **executive-summary** | Whether the analysis was right, or whether the action is the right call. It proves the summary matches the analysis |
+| **executive-summary** | Whether the analysis was right, or whether the action is the right call. It finds every number in the sources; whether each sits on the right line, and the wording, are yours to check |
 
 ## What's inside
 
 | Skill | What it does | Ask Claude something like |
 |---|---|---|
 | **reporting-standards** | Run first. A ten-minute interview that writes `HOUSE.md`: who reads your work, where your numbers live, what your words mean, what must never appear. Every other skill reads it | "Document our reporting standards" |
-| **variance-analysis** | Budget against actual in, a first draft of the commentary out, material lines only, totals tied | "Draft the variance commentary for September" |
+| **variance-analysis** | Budget against actual in, a first draft of the commentary out, material lines only, subtotals tied | "Draft the variance commentary for September" |
 | **root-cause-analysis** | Breaks a change down by segment (and for a rate, into mix and rate effects) and proves it adds up | "Why did conversion drop last month?" |
 | **executive-summary** | Five lines for a leader (answer, number, action, risk, what it rests on), every number traced | "Summarise this for the CEO" |
 
-Every skill reads `HOUSE.md` first, shows its working, lists what it had to assume, and never changes one of your
-numbers. When you correct its output, it offers the correction as a rule; it keeps only the ones you say yes to, and
-logs how many corrections each run needed, so you can see it learn your way of working.
+The three analysis skills read `HOUSE.md` first, show their working, list what they had to assume, and never change one of
+your numbers. When you correct their output, they offer the correction as a rule, keep only the ones you say yes to, and
+log how many corrections each run needed, so you can see it learn your way of working.
 
 ## What the pack leaves out on purpose
 
@@ -65,7 +70,8 @@ as a setup, not in the free pack. See [kinetric.co/essentials.html](https://kine
 
 1. Turn on **Code execution and file creation** (Settings > Capabilities).
 2. Go to **Customize > Skills**, click **+**, choose **Create skill**, then **Upload a skill**.
-3. Upload each zip in the `for-claude-app/` folder, one at a time (four zips, one per skill).
+3. Upload each zip in this repo's `for-claude-app/` folder, one at a time (four zips, one per skill). The same zips
+   come with the download at [kinetric.co/download.html](https://kinetric.co/download.html).
 4. Make sure each skill's toggle is on.
 5. Start a new chat and say: **"Document our reporting standards."** Save the `HOUSE.md` it writes into your project's knowledge so
    every chat can see it.
@@ -94,7 +100,8 @@ Run `/essentials:reporting-standards` first and keep `HOUSE.md` in your working 
 
 Every skill carries a small made-up example in `references/example/`. Ask: "Run the variance analysis on your example pack," or
 "Show me root-cause-analysis on the example data." Each one should give the answer its `TEST_RECORD.md` describes. Each skill
-also has a test script (`scripts/test_*.py`); exit 0 means it works on your setup.
+also has a test script (`scripts/test_*.py`); exit 0 means its scripts give their known answers on your machine. It
+tests the scripts, not how Claude uses the skills.
 
 ## Where it works
 
@@ -108,12 +115,16 @@ also has a test script (`scripts/test_*.py`); exit 0 means it works on your setu
 | Mobile apps | Not supported |
 | Other AI tools | May work (open format); not tested |
 
+PENDING-TEST means Anthropic's docs say it works there, and we haven't yet run the pack there ourselves.
+
 ## Before you install anything
 
 A skill is code and instructions. Read it before you install it, including this one. These skills read only the files
-you give them, send nothing anywhere, and never change an input file.
+you give them. The scripts make no network calls; your files go only where your Claude session already sends them.
+The skills write their results as new files in an output folder, and a run log if you keep one. In HOUSE.md they add a
+rule only with your yes, and log how many corrections each run needed. They never change one of your data files.
 
-## What this pack leaves out
+## What a setup adds
 
 Your team's rules, tested. The pack starts from sensible defaults and your house file. It doesn't know which date basis
 your board expects or which attribution window your brand reports, and it hasn't been checked against the last six

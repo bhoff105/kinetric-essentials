@@ -8,19 +8,25 @@ LINES.csv columns (header names are case-insensitive):
     line      the line name as it appears in the pack               (required)
     budget    the budget or forecast figure                         (required)
     actual    the actual figure                                     (required)
-    type      revenue, cost, or other: sets favorable/unfavorable (optional; without it, only above/below)
-    total     yes on a row that should equal the sum of the others  (optional; tied and reported)
+    type      revenue, cost, or other: sets favorable/unfavorable (optional; without it, only above/below).
+              Costs are entered as positive numbers; a negative cost is flagged, since it reads the other way
+    total     yes on a plain subtotal: it is tied to the sum of the non-total rows directly above it, back to the
+              previous total (optional; tied and reported). Leave net, gross-profit and grand-total rows unmarked
     owner     who to ask about the line                              (optional; named in the draft)
 
 Writes to DIR: variance_table.csv, commentary_draft.md, checks.txt. Never changes an input number.
 A line is material when |variance| >= --abs AND |variance %| >= --pct (or OR, with --rule or).
 
-Exit 0: written, totals tie. Exit 1: written, but a total row does not tie or a line has no budget (named in checks.txt
-and the draft). Exit 2: the file could not be read or a required column is missing; nothing written.
+A comma is read only as a thousands separator (1,234,567.89); any other comma, such as a decimal comma, stops the run.
+
+Exit 0: written, totals tie. Exit 1: written, but a total row does not tie, a figure is blank, or a cost is negative
+(named in checks.txt and the draft). Exit 2: the file could not be read, a required column is missing, or a figure is
+not a number; nothing written.
 """
 import argparse
 import csv
 import os
+import re
 import sys
 from decimal import Decimal, InvalidOperation
 
@@ -28,14 +34,23 @@ TOL = Decimal("0.01")
 
 
 def num(s, where):
-    t = (s or "").strip().replace(",", "").replace("$", "").replace("£", "").replace("€", "")
+    t = (s or "").strip().replace("$", "").replace("£", "").replace("€", "")
     neg = t.startswith("(") and t.endswith(")")
-    t = t.strip("()")
+    if neg:
+        t = t[1:-1]
+    elif "(" in t or ")" in t:
+        raise ValueError(f"{where}: '{s}' is not a number (an unmatched parenthesis)")
     if t == "":
         return None
+    if "," in t:
+        if not re.fullmatch(r"[-+]?\d{1,3}(,\d{3})+(\.\d+)?", t):
+            raise ValueError(f"{where}: '{s}' has a comma that is not a thousands separator (a decimal comma is not read)")
+        t = t.replace(",", "")
     try:
         v = Decimal(t)
     except InvalidOperation:
+        raise ValueError(f"{where}: '{s}' is not a number")
+    if not v.is_finite():
         raise ValueError(f"{where}: '{s}' is not a number")
     return -v if neg else v
 
@@ -58,8 +73,8 @@ def main(argv=None):
     try:
         with open(a.lines, encoding="utf-8-sig", newline="") as f:
             rows = list(csv.DictReader(f))
-    except OSError as e:
-        print(f"variance: cannot read {a.lines}: {e}", file=sys.stderr)
+    except (OSError, UnicodeDecodeError, csv.Error) as e:
+        print(f"variance: cannot read {a.lines} (save it as UTF-8 CSV): {e}", file=sys.stderr)
         return 2
     if not rows:
         print(f"variance: {a.lines} has no rows", file=sys.stderr)
@@ -92,6 +107,9 @@ def main(argv=None):
             it.update(var=None, pct=None, direction="no figure", fav="", material=False)
             problems.append(f"row {it['row']} ({it['line']}): {'budget' if b is None else 'actual'} is blank; no variance computed")
             continue
+        if it["type"] == "cost" and (b < 0 or act < 0):
+            problems.append(f"row {it['row']} ({it['line']}): a cost entered as a negative; favorable and unfavorable read the "
+                            "other way. Confirm the sign, or enter costs as positive numbers")
         var = act - b
         pct = (var / abs(b) * 100) if b != 0 else None
         direction = "above budget" if var > 0 else "below budget" if var < 0 else "on budget"
@@ -175,6 +193,9 @@ def main(argv=None):
         C.append(f"tie {name} {fld}: page {v} lines {s} gap {d} {'TIES' if ok else 'DOES NOT TIE'}")
     if not ties:
         C.append("tie: no total row given; nothing tied (add a total column marked yes to tie one)")
+    nob = [it["line"] for it in items if it["budget"] == 0 and it.get("var")]
+    if nob:
+        C.append(f"no budget to compare, so material by % on any change: {', '.join(nob)}")
     C += [f"problem: {p}" for p in problems]
     C.append(f"result: {'PASS' if not problems else 'SEE PROBLEMS'}")
     with open(os.path.join(a.out, "checks.txt"), "w", encoding="utf-8", newline="\n") as f:
